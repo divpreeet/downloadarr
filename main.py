@@ -6,6 +6,7 @@ import yt_dlp
 import requests
 from mutagen.mp3 import MP3
 from mutagen.id3 import ID3, TIT2, TPE1, TALB, TDRC, TRCK, TCON, APIC
+import shutil
 
 OUTPUT_DIR = os.environ.get("MUSIC_DIR", "./music")
 SPOTIFY_CLIENT_ID = os.environ.get("SPOTIFY_CLIENT_ID", "")
@@ -132,45 +133,65 @@ def metadata(query):
 
 def search_youtube(query):
     print(f"searching yt for {query}")
+    opts = {
+        "quiet": True,
+        "no_warnings": True,
+        "extract_flat": False,
+        "noplaylist": True,
+        "ignoreerrors": True,
+    }
     try:
-        with yt_dlp.YoutubeDL({"quiet": True, "no_warnings": True, "extract_flat": False, "noplaylist": True}) as ydl:
-            result = ydl.extract_info(f"ytsearch5:{query}", download=False)
-        entries = result.get("entries", [])
+        with yt_dlp.YoutubeDL(opts) as ydl:
+            result = ydl.extract_info(f"ytsearch10:{query}", download=False)
+
+        entries = [e for e in (result.get("entries") or []) if e]
         if not entries:
             return []
+
         results = []
-        print("youtube results: ")
-        for i, e in enumerate(entries):
-            dur = e.get("duration", 0)
-            results.append({"title": e.get("title", "Unkown"), "url": e.get("webpage_url", "")})
-            print(f"  {i + 1}. {e.get('title', 'Unknown')} ({dur // 60}:{dur % 60:02d})")
+        print("youtube results:")
+        for i, e in enumerate(entries[:5]):
+            vid = e.get("webpage_url") or e.get("url")
+            if vid and not str(vid).startswith("http"):
+                vid = f"https://www.youtube.com/watch?v={vid}"
+
+            dur = e.get("duration")
+            if isinstance(dur, (int, float)):
+                dur = int(dur)
+            else:
+                dur = 0
+            
+            title = e.get("title", "Unknown")
+            results.append({"title": title, "url": vid})
+            print(f"  {i + 1}. {title} ({dur // 60}:{dur % 60:02d})")
+
         return results
     except Exception as e:
-        print(e)
+        print("youtube search error:", e)
         return []
-    
+
 def download_audio(url, output_path):
-    print("downloadinggggg")
+    print("downloading...")
     try:
         with yt_dlp.YoutubeDL({
             "format": "bestaudio/best",
-            "postprocessors": [{"key": "FFmpegExtractAudio", "preferredcodec": "mp3", "preferredquality": "320"}],
+            "postprocessors": [{"key": "FFmpegExtractAudio", "preferredcodec": "mp3", 'preferredquality':320}],
             "outtmpl": output_path,
             "quiet": True,
             "no_warnings": True,
         }) as ydl:
             ydl.download([url])
         mp3 = output_path + ".mp3"
-        return mp3 if os.path.exists(mp3) else None
+        if os.path.exists(mp3):
+            return mp3
+        else:
+            None
     except Exception as e:
         print(e)
-        return []
-
+        return None
+    
 def tagging(filepath, metadata, album_art):
-    try:
-        audio = MP3(filepath, ID3=ID3)
-    except Exception:
-        audio = MP3(filepath)
+    audio = MP3(filepath, ID3=ID3)
     try:
         audio.add_tags()
     except Exception:
@@ -179,26 +200,44 @@ def tagging(filepath, metadata, album_art):
     tags = audio.tags
     tag_map = {
         "title": TIT2, "artist": TPE1, "album": TALB,
-        "date": TDRC, "track_number": TRCK, "genre":TCON
+        "date": TDRC, "track_number": TRCK, "genre": TCON
     }
-    for key, tag_cls, in tag_map.items():
-        if metadata.get(key):
-            tags.add(tag_cls(encoding=3, text=metadata[key]))
+    for key, tag_cls in tag_map.items():
+        val = metadata.get(key)
+        if val:
+            tags.add(tag_cls(encoding=3, text=str(val)))
 
     if album_art:
         tags.add(APIC(encoding=3, mime="image/jpeg", type=3, desc="Cover", data=album_art))
-        audio.save()
-    
-    
-    
-if __name__ == "__main__":
-    token = get_spotify_token()
-    print("token ok", bool(token))
 
-    if not token:
-        sys.exit(1)
+    audio.save()
+
+def test(query="fein"):
+    metadatar = search_deezer(query)
+    if not metadatar:
+        print("no deezer metadata for the qwuery")
+        
+    meta = metadatar[0]
+    print("metadata:", meta['artist'], meta["title"], meta["album"])
+
+    yt_results = search_youtube(f"{meta['artist']} {meta['title']} audio")
+    if not yt_results:
+        print("no youtube results")
+        return
     
-    results = search_spotify("jingle bells", token)
-    print(len(results))
-    for i in results:
-        print(i)
+    yt = yt_results[0]
+    print("yt:", yt["title"])
+    print("url", yt["url"])
+
+    os.makedirs(OUTPUT_DIR, exist_ok=True)
+    out_base = os.path.join(OUTPUT_DIR, sanitize(f"{meta['artist']}, {meta['title']}"))    
+    mp3_path = download_audio(yt["url"], out_base)
+    if not mp3_path:
+        print("download failed; skipping tagging")
+        return
+    tagging(mp3_path, meta, fetch_art(meta.get("album_art_url")))
+
+    audio = MP3(mp3_path, ID3=ID3)
+
+if __name__ == "__main__":
+    test("fein")
