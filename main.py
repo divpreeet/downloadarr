@@ -289,32 +289,5 @@ def main():
             if query:
                 download(query)
 
-# def test(query="fein"):
-#     metadatar = search_deezer(query)
-#     if not metadatar:
-#         print("no deezer metadata for the qwuery")
-        
-#     meta = metadatar[0]
-#     print("metadata:", meta['artist'], meta["title"], meta["album"])
-
-#     yt_results = search_youtube(f"{meta['artist']} {meta['title']} audio")
-#     if not yt_results:
-#         print("no youtube results")
-#         return
-    
-#     yt = yt_results[0]
-#     print("yt:", yt["title"])
-#     print("url", yt["url"])
-
-#     os.makedirs(OUTPUT_DIR, exist_ok=True)
-#     out_base = os.path.join(OUTPUT_DIR, sanitize(f"{meta['artist']}, {meta['title']}"))    
-#     mp3_path = download_audio(yt["url"], out_base)
-#     if not mp3_path:
-#         print("download failed; skipping tagging")
-#         return
-#     tagging(mp3_path, meta, fetch_art(meta.get("album_art_url")))
-
-#     audio = MP3(mp3_path, ID3=ID3)
-
 if __name__ == "__main__":
     main()
