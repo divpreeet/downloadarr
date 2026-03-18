@@ -6,7 +6,6 @@ import yt_dlp
 import requests
 from mutagen.mp3 import MP3
 from mutagen.id3 import ID3, TIT2, TPE1, TALB, TDRC, TRCK, TCON, APIC
-import shutil
 
 OUTPUT_DIR = os.environ.get("MUSIC_DIR", "./music")
 SPOTIFY_CLIENT_ID = os.environ.get("SPOTIFY_CLIENT_ID", "")
@@ -212,32 +211,110 @@ def tagging(filepath, metadata, album_art):
 
     audio.save()
 
-def test(query="fein"):
-    metadatar = search_deezer(query)
-    if not metadatar:
-        print("no deezer metadata for the qwuery")
-        
-    meta = metadatar[0]
-    print("metadata:", meta['artist'], meta["title"], meta["album"])
+def organize(filepath, metadata):
+    artist = sanitize(metadata.get("artist", "Unknown Artist"))
+    album = sanitize(metadata.get("album", "Unknown Album"))
+    title = sanitize(metadata.get("title", "track"))
+    num = metadata.get("track_number", "")
+    # i have no idea why this works
+    filename = f"{num.zfill(2)} - {title}.mp3" if num else f"{title}.mp3"
+    dir = os.path.join(OUTPUT_DIR, artist, album)
+    os.makedirs(dir, exist_ok=True)
+    dest = os.path.join(dir, filename)
 
-    yt_results = search_youtube(f"{meta['artist']} {meta['title']} audio")
-    if not yt_results:
-        print("no youtube results")
-        return
+    if os.path.exists(dest):
+        print(f"already exists: {dest}")
+        overwrite = input("overwrite? (y/n): ")
+        if overwrite != "y":
+            os.remove(filepath)
+            print("skipped")
+            return dest
     
-    yt = yt_results[0]
-    print("yt:", yt["title"])
-    print("url", yt["url"])
+    os.rename(filepath, dest)
+    print(f"saved: {dest}")
+    return dest
+
+def download(query):
+    print(f"\n{'=' * 40}")
+    print(f"processing: {query}")
+    print(f"{'=' * 40}")
+
+    metadata_song, album_art = metadata(query)
+    if metadata_song:
+        meta = metadata_song
+    else:
+        meta = {
+            "title": query,
+            "artist": "Unknown Artist",
+            "album": "Unknown Album",
+            "date": "",
+            "track_number": "",
+            "genre": ""
+        }
+
+    yt_query = f"{meta['artist']} - {meta['title']}" if meta["artist"] != "Unknown Artist" else query
+    results = search_youtube(yt_query)
+    if not results:
+        print("no results found")
+        return
+
+    while True:
+        try:
+            c = int(input(f"pick video (1-{len(results)}): ").strip())
+            if 1 <= c <= len(results):
+                break
+        except ValueError:
+            pass
 
     os.makedirs(OUTPUT_DIR, exist_ok=True)
-    out_base = os.path.join(OUTPUT_DIR, sanitize(f"{meta['artist']}, {meta['title']}"))    
-    mp3_path = download_audio(yt["url"], out_base)
-    if not mp3_path:
-        print("download failed; skipping tagging")
+    mp3 = download_audio(results[c - 1]["url"], os.path.join(OUTPUT_DIR, "temp_download"))
+    if not mp3:
+        print("download failed")
         return
-    tagging(mp3_path, meta, fetch_art(meta.get("album_art_url")))
 
-    audio = MP3(mp3_path, ID3=ID3)
+    tagging(mp3, meta, album_art)
+    organize(mp3, meta)
+    print("done")
+
+def main():
+    if len(sys.argv) > 1:
+        download(" ".join(sys.argv[1:]))
+    else:
+        print("downloadarr")
+        print("type a song name or 'quit' to exit")
+        while True:
+            query = input("song: ").strip()
+            if query.lower() in ("quit"):
+                break
+            if query:
+                download(query)
+
+# def test(query="fein"):
+#     metadatar = search_deezer(query)
+#     if not metadatar:
+#         print("no deezer metadata for the qwuery")
+        
+#     meta = metadatar[0]
+#     print("metadata:", meta['artist'], meta["title"], meta["album"])
+
+#     yt_results = search_youtube(f"{meta['artist']} {meta['title']} audio")
+#     if not yt_results:
+#         print("no youtube results")
+#         return
+    
+#     yt = yt_results[0]
+#     print("yt:", yt["title"])
+#     print("url", yt["url"])
+
+#     os.makedirs(OUTPUT_DIR, exist_ok=True)
+#     out_base = os.path.join(OUTPUT_DIR, sanitize(f"{meta['artist']}, {meta['title']}"))    
+#     mp3_path = download_audio(yt["url"], out_base)
+#     if not mp3_path:
+#         print("download failed; skipping tagging")
+#         return
+#     tagging(mp3_path, meta, fetch_art(meta.get("album_art_url")))
+
+#     audio = MP3(mp3_path, ID3=ID3)
 
 if __name__ == "__main__":
-    test("fein")
+    main()
