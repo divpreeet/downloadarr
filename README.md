@@ -29,7 +29,7 @@ to keep these persistent, just store the variables in your ```.zshrc``` or ```.b
 ## installation
 1. clone the repo
 ```sh
-git clone https://github.com/divpreeet/downloadarr.git"
+git clone https://github.com/divpreeet/downloadarr.git
 cd downloadarr/
 ```
 2. create a virtual environment
@@ -56,7 +56,7 @@ sudo apt-get install -y ffmpeg
 ```sh
 python3 main.py
 ```
-### Notes
+### notes
  - make sure ffmpeg is installed on your system
  - the app provides an overwrite prompt
  - you can totally skip the metadata part, just click 0 on the prompt for choosing a result.
