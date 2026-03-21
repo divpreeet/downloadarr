@@ -88,6 +88,38 @@ def download(req: DownloadRequest, background_tasks: BackgroundTasks):
     
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
-    
+
+@app.get("/library")
+def library():
+    try:
+        library = []
+        
+        if not os.path.exists(OUTPUT_DIR):
+            return {"songs": []}
+        
+        for artist in os.listdir(OUTPUT_DIR):
+            artist_path = os.path.join(OUTPUT_DIR, artist)
+            if not os.path.isdir(artist_path) or artist == "temp_download":
+                continue
+
+            for album in os.listdir(artist_path):
+                album_path = os.path.join(artist_path, album)
+                if not os.path.isdir(album_path):
+                    continue
+
+                for filename in os.listdir(album_path):
+                    if filename.endswith(".mp3") or filename.endswith(".flac"):
+                        library.append({
+                            "artist": artist,
+                            "album": album,
+                            "filename": filename,
+                            "url": f"/file/{artist}/{album}/{filename}"
+                        })
+        return {"songs": library}
+    except Exception as e:
+        raise HTTPException(status_code = 500, detail=str(e))
+
+
+
 if __name__ == "__main__":
     uvicorn.run(app, host="0.0.0.0", port=8000)
