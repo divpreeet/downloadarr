@@ -65,27 +65,34 @@ def search_spotify(query, token):
         print(f"[spotify] search error: {e}")
         return []
 
-def search_deezer(query):
-    try:
-        resp = requests.get("https://api.deezer.com/search", params={"q": query, "limit": 5}, timeout=10)
-        if resp.status_code != 200:
+def search_deezer(query, retries=2):
+    for attempt in range(retries + 1):
+        try:
+            resp = requests.get("https://api.deezer.com/search", params={"q": query, "limit": 5}, timeout=10)
+            if resp.status_code != 200:
+                return []
+            return [
+                {
+                    "title": t.get("title", "Unknown"),
+                    "artist": t.get("artist", {}).get("name", "Unknown Artist"),
+                    "album": t.get("album", {}).get("title", "Unknown Ablum"),
+                    "album_art_url": t.get("album", {}).get("cover_big"),
+                    "track_number": str(t.get("track_pos", "")),
+                    "date": "",
+                    "genre": "",
+                    "source": "deezer",
+                }
+                for t in resp.json().get("data", [])
+            ]
+        except requests.exceptions.Timeout:
+            if attempt < retries:
+                print(f"deezer timed out, retrying ({attempt + 1}/{retries})...")
+            else:
+                print("deezer timed out after all retries")
+                return []
+        except Exception as e:
+            print(e)
             return []
-        return [
-            {
-                "title": t.get("title", "Unknown"),
-                "artist": t.get("artist", {}).get("name", "Unknown Artist"),
-                "album": t.get("album", {}).get("title", "Unknown Ablum"),
-                "album_art_url": t.get("album", {}).get("cover_big"),
-                "track_number": str(t.get("track_pos", "")),
-                "date": "",
-                "genre": "",
-                "source": "deezer",
-            }
-            for t in resp.json().get("data", [])
-        ]
-    except Exception as e:
-        print(e)
-        return []
 
 def fetch_art(url):
     if not url:
@@ -108,6 +115,22 @@ def metadata(query):
     
     if not results:
         print("no metadata found on any service")
+        while True:
+            retry = input("retry with a different search term? (y/n): ").strip().lower()
+            if retry == "y":
+                query = input("new search term: ").strip()
+                if token:
+                    results = search_spotify(query, token)
+                if not results:
+                    results = search_deezer(query)
+                if results:
+                    break
+                print("still no results found, try another term, or n to skip.")
+            else:
+                return None, None
+        if not results:
+            return None, None
+
     
     source = results[0].get("source", "unknown")
     print(f"resulsts from {source}:")
@@ -184,7 +207,7 @@ def download_audio(url, output_path):
         if os.path.exists(mp3):
             return mp3
         else:
-            None
+            return None
     except Exception as e:
         print(e)
         return None
