@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>downloadarr</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <nav class="nav">
+        <div class="nav-content">
+            <h2 class="nav-title">downloadarr</h2>
+            <div class="nav-links">
+                <button class="nav-link active" data-tab="search">search</button>
+                <button class="nav-link" data-tab="donwloads">downloads</button>
+                <button class="nav-link" data-tab="library">library</button>
+            </div>
+        </div>
+    </nav>
+
+    <main>
+        <section id="search" class="tab-active">
+            <div class="hero">
+                <div class="hero-content">
+                    <h1>an on demand music downloader!</h1>
+                </div>
+            </div>
+            <div class="search-container">
+                <div class="search-box">
+                    <input type="text" id="searchQuery" placeholder="find your song!" class="search-input">
+                    <button id="searchBtn" class="search-btn">search</button>
+                </div>
+            </div>
+            
+            <div class="results-container">
+                <div id="metadataResults" class="results-grid"></div>
+            </div>
+            <div id="noResuts" class="empty-state">
+                <p>no results yet</p>
+            </div>
+        </section>
+
+        <section id="downloads" class="tab">
+            <div class="section-header">
+                <h2>downloads</h2>
+                <p>active downloads</p>
+            </div>
+            <div id="downloadsList" class="downloads-container">
+                <div id="noDownloads" class="empty-state">
+                    <p>no active downloads</p>
+                </div>
+            </div>
+        </section>
+        
+        <section id="library" class="tab">
+            <div class="section-header">
+                <div>
+                    <h2>library</h2>
+                    <p>saved music</p>
+                </div>
+                <button id="refresh" class="refresh-btn">refresh</button>
+            </div>
+            <div id="libraryList" class="library-grid">
+            </div>
+            <div id="noLibrary" class="empty-state">library is empty, start downloading!
+            </div>
+        </section>
+    </main>
+    <div id="loadingOverlay" class="loading-overlay">
+        <div class="loading-spinner">
+        </div>
+    </div>
+
+    <div id="toast" class="toast"></div>
+
+    <div id="modal" class="modal">
+        <div class="modal-backdrop" onclick="app.closeModal()"></div>
+        <div class="modal-content">
+            <button class="modal-close" onclick="app.closeModal">×</button>
+            <div id="modalBody"></div>
+        </div>
+    </div>
+
+    <script src="main.js"></script>
+
+</body>
+</html>
