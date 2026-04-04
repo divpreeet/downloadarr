@@ -8,6 +8,7 @@ import os
 from main import (
     search_deezer, search_spotify, search_youtube, get_spotify_token, download_audio, tagging, organize, fetch_art, OUTPUT_DIR
 )
+from fastapi.staticfiles import StaticFiles
 
 
 app = FastAPI()
@@ -120,6 +121,8 @@ def library():
         raise HTTPException(status_code = 500, detail=str(e))
 
 
+if os.path.exists("web"):
+    app.mount("/", StaticFiles(directory="web", html=True), name="web")
 
 if __name__ == "__main__":
     uvicorn.run(app, host="0.0.0.0", port=8000)

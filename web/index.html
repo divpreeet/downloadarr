@@ -12,14 +12,14 @@
             <h2 class="nav-title">downloadarr</h2>
             <div class="nav-links">
                 <button class="nav-link active" data-tab="search">search</button>
-                <button class="nav-link" data-tab="donwloads">downloads</button>
+                <button class="nav-link" data-tab="downloads">downloads</button>
                 <button class="nav-link" data-tab="library">library</button>
             </div>
         </div>
     </nav>
 
     <main>
-        <section id="search" class="tab-active">
+        <section id="search" class="tab active">
             <div class="hero">
                 <div class="hero-content">
                     <h1>an on demand music downloader!</h1>
@@ -35,7 +35,7 @@
             <div class="results-container">
                 <div id="metadataResults" class="results-grid"></div>
             </div>
-            <div id="noResuts" class="empty-state">
+            <div id="noResults" class="empty-state">
                 <p>no results yet</p>
             </div>
         </section>
@@ -76,7 +76,7 @@
     <div id="modal" class="modal">
         <div class="modal-backdrop" onclick="app.closeModal()"></div>
         <div class="modal-content">
-            <button class="modal-close" onclick="app.closeModal">×</button>
+            <button class="modal-close" onclick="app.closeModal()">×</button>
             <div id="modalBody"></div>
         </div>
     </div>
