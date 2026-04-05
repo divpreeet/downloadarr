@@ -53,7 +53,7 @@ def search_spotify(query, token):
                 "title": t.get("name", "Unknown"),
                 "artist": ", ".join(a["name"] for a in t.get("artists", [])),
                 "album": t.get("album", {}).get("name", "Unknown Album"),
-                "album_art_url": t["album"]["images"][0]["url"] if t.get("album", {}).get("images") else None,
+                "albumArtURL": t["album"]["images"][0]["url"] if t.get("album", {}).get("images") else None,
                 "date": t.get("album", {}).get("release_date", "")[:4],
                 "track_number": str(t.get("track_number", "")),
                 "genre": "",
@@ -76,7 +76,7 @@ def search_deezer(query, retries=2):
                     "title": t.get("title", "Unknown"),
                     "artist": t.get("artist", {}).get("name", "Unknown Artist"),
                     "album": t.get("album", {}).get("title", "Unknown Ablum"),
-                    "album_art_url": t.get("album", {}).get("cover_big"),
+                    "albumArtURL": t.get("album", {}).get("cover_big"),
                     "track_number": str(t.get("track_pos", "")),
                     "date": "",
                     "genre": "",
@@ -151,7 +151,7 @@ def metadata(query):
     sel = results[c-1]
     print(f"{sel['artist']} - {sel['title']} ({sel['album']})")
     
-    return sel, fetch_art(sel.get("album_art_url"))
+    return sel, fetch_art(sel.get("albumArtURL"))
 
 def search_youtube(query):
     print(f"searching yt for {query}")

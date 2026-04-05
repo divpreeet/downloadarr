@@ -1,14 +1,42 @@
 class downloadarr {
     constructor() {
         this.baseURL = window.location.origin;
-        this.init();
-    }
+        this.messages = [
+            "an on demand music downloader!",
+            "downloadarr",
+            "howdy pirate",
+            "piracy isnt good",
+            "spotify premium++",
+            "arr",
+            "i love self hosting stuff",
+            "btw it took me 15h to build this",
 
+        ];
+        this.messageIndex = 0;
+        this.init();
+        
+    }
 
     init() {
         this.eventListeners();
+        this.cycleMessages();
     }
 
+    cycleMessages() {
+        const h1 = document.querySelector('.hero h1');
+        if (h1) {
+            h1.textContent = this.messages[this.messageIndex];
+            this.messageIndex = (this.messageIndex + 1) % this.messages.length;
+        } 
+        setInterval(() => {
+            const h1 = document.querySelector('.hero h1');
+            if (h1) {
+                h1.textContent = this.messages[this.messageIndex];
+                this.messageIndex = (this.messageIndex + 1) % this.messages.length;
+            }
+        }, 7000);
+    }
+ 
     eventListeners() {
         document.querySelectorAll('.nav-link').forEach(link => {
             link.addEventListener('click', (e) => {
@@ -17,7 +45,6 @@ class downloadarr {
             })
         });
 
-        // search metadata wld be like ios app
         document.getElementById('searchBtn').addEventListener('click', () => this.searchMetadata());
 
         document.getElementById('searchQuery').addEventListener('keypress', (e) => {
@@ -32,6 +59,7 @@ class downloadarr {
         document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
         document.querySelectorAll('.nav-link').forEach(l => l.classList.remove('active'));
         document.getElementById(tab).classList.add('active');
+        document.querySelector(`[data-tab="${tab}"]`).classList.add('active');
         
         if (tab == 'library') this.loadlibrary();
     }
@@ -40,7 +68,6 @@ class downloadarr {
         document.getElementById('loadingOverlay').classList.toggle('active', show);
     }
     
-    // functions
     showToast(message) {
         const toast = document.getElementById('toast');
         toast.textContent = message;
@@ -58,7 +85,7 @@ class downloadarr {
 
             const response = await fetch(`${this.baseURL}${endpoint}`, options)
 
-            if (!response.ok) throw new Error(`api error: ${response}`); 
+            if (!response.ok) throw new Error(`api error: ${response.status}`); 
             return await response.json();
         } catch (error) {
             this.showToast(error.message);
@@ -66,7 +93,6 @@ class downloadarr {
         }
     }
 
-    //metdataaaaa
     async searchMetadata() {
         const query = document.getElementById('searchQuery').value.trim();
         if (!query) {
@@ -85,7 +111,6 @@ class downloadarr {
         }
     }
 
-
     displayResults(results) {
         const container = document.getElementById('metadataResults');
         const noResults = document.getElementById('noResults');
@@ -100,7 +125,7 @@ class downloadarr {
         container.innerHTML = results.map(r => `
             <div class="card" onclick="app.selectMetadata(${JSON.stringify(r).replace(/"/g, '&quot;')})">
                 <div class="card-image">
-                    ${r.albumArtURL ? `<img src="${r.albumArtURL}" alt="${r.title}">`: 'Music'}
+                    ${r.albumArtURL ? `<img src="${r.albumArtURL}" alt="${r.title}">`: '🎵'}
                 </div>
                 <div class="card-content">
                     <div class="card-title">${this.escape(r.title)}</div>
@@ -174,8 +199,36 @@ class downloadarr {
         }
     }
 
-    checkdnwld() {
-        // dnwliad monitoring, might just put logs here though
+    displayDownloads(downloads) {
+        const container = document.getElementById('downloadsList');
+        const noDownloads = document.getElementById('noDownloads');
+
+        if (downloads.length === 0) {
+            container.innerHTML = '';
+            noDownloads.style.display = 'block';
+            return;
+        }
+
+        noDownloads.style.display = 'none';
+        container.innerHTML = downloads.map(d => `
+            <div class="download-item">
+                <div class="download-info">
+                    <h3>${this.escape(d.title)}</h3>
+                    <div class="download-status">
+                        ${d.status === 'completed' ? '✓' : d.status === 'failed' ? '✗' : '⟳'} ${d.status}
+                    </div>
+                </div>
+            </div>
+        `).join('');
+    }
+
+    async checkdnwld() {
+        try {
+            const response = await this.apiCall('/downloads');
+            this.displayDownloads(response.downloads || []);
+        } catch (error){
+            //failllllll
+        }
     }
 
     async loadlibrary() {
@@ -201,19 +254,23 @@ class downloadarr {
         }
 
         noLibrary.style.display = 'none';
-        container.innerHTML = songs.map(s => `
-            <div class="card">
-                <div class="card-image">🎵</div>
-                <div class="card-content">
-                    <div class="card-title">${this.escape(s.filename)}</div>
-                    <div class="card-meta">
-                        ${this.escape(s.artist)}
-                        <div class="card-meta-small">${this.escape(s.album)}</div>
+        container.innerHTML = songs.map(s => {
+            const artUrl = `/file/art/${encodeURIComponent(s.artist)}/${encodeURIComponent(s.album)}/${encodeURIComponent(s.filename)}`;
+            return `
+                <div class="card">
+                    <div class="card-image">
+                        <img src="${artUrl}" alt="${s.filename}" onerror="this.parentElement.textContent='🎵'">
                     </div>
-                    <button class="card-action" onclick="window.open('${s.url}')">download</button>
+                    <div class="card-content">
+                        <div class="card-title">${this.escape(s.filename)}</div>
+                        <div class="card-meta">
+                            ${this.escape(s.artist)}
+                            <div class="card-meta-small">${this.escape(s.album)}</div>
+                        </div>
+                    </div>
                 </div>
-            </div>
-        `).join('');
+            `;
+        }).join('');
     }
 
     escape(str) {
