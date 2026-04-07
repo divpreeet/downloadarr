@@ -5,12 +5,13 @@ from fastapi.responses import FileResponse, Response
 from pydantic import BaseModel
 import uvicorn
 import os
+import threading
+import time
+from datetime import datetime
 from main import (
     search_deezer, search_spotify, search_youtube, get_spotify_token, download_audio, tagging, organize, fetch_art, OUTPUT_DIR
 )
 from mutagen.id3 import ID3, APIC
-import asyncio
-from datetime import datetime
 
 app = FastAPI()
 
@@ -29,6 +30,8 @@ class DownloadRequest(BaseModel):
     url: str
     metadata: dict
 
+active_downloads = {}
+
 @app.post("/search/metadata")
 def metadata_search(req: SearchRequest):
     try:
@@ -45,7 +48,6 @@ def metadata_search(req: SearchRequest):
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
-
 @app.post("/search/youtube")
 def youtube_search(req: SearchRequest):
     try:
@@ -56,23 +58,53 @@ def youtube_search(req: SearchRequest):
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
-
 def _download_task(url: str, metadata: dict):
+    download_id = f"{metadata.get('artist')}_{metadata.get('title')}_{datetime.now().timestamp()}"
+    
+    active_downloads[download_id] = {
+        "title": metadata.get("title"),
+        "artist": metadata.get("artist"),
+        "status": "downloading",
+        "progress": 0
+    }
+    
+    print(f"[download] Starting: {download_id}")
+    
     try:
         os.makedirs(OUTPUT_DIR, exist_ok=True)
         temp = os.path.join(OUTPUT_DIR, "temp_download")
 
+        print(f"[download] Downloading audio from {url}")
         mp3 = download_audio(url, temp)
+        
         if not mp3:
-            print(f"download failed for {metadata.get('title')}")
+            active_downloads[download_id]["status"] = "failed"
+            print(f"[download] Failed to download MP3 for {metadata.get('title')}")
             return
 
-        album_art = fetch_art(metadata.get("albumArtURL"))  # FIX: albumArtURL not albumArtUrl
+        print(f"[download] Downloaded to {mp3}")
+        active_downloads[download_id]["status"] = "tagging"
+        
+        album_art = fetch_art(metadata.get("albumArtURL"))
         tagging(mp3, metadata, album_art)
+
+        active_downloads[download_id]["status"] = "organizing"
         path = organize(mp3, metadata)
-        print(f"downloaded to {path}")
+
+        active_downloads[download_id]["status"] = "completed"
+        print(f"[download] Completed: {path}")
+
     except Exception as e:
-        print(f"download task error: {e}")
+        active_downloads[download_id]["status"] = "error"
+        print(f"[download] Error: {e}")
+        import traceback
+        traceback.print_exc()
+    finally:
+        def remove_later():
+            time.sleep(10)
+            active_downloads.pop(download_id, None)
+        
+        threading.Thread(target=remove_later, daemon=True).start()
 
 @app.post("/download")
 def download(req: DownloadRequest, background_tasks: BackgroundTasks):
@@ -115,7 +147,6 @@ def library():
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
-
 @app.get("/file/art/{artist}/{album}/{filename}")
 def get_art(artist: str, album: str, filename: str):
     try:
@@ -143,48 +174,6 @@ def get_art(artist: str, album: str, filename: str):
     except Exception as e:
         print(f"[get_art] Error: {e}")
         raise HTTPException(status_code=500, detail=str(e))
-    
-
-async def remove_download(download_id: str):
-    await asyncio.sleep(5)
-    active_downloads.pop(download_id, None)
-
-active_downloads = {}
-def _download_tast(url: str, metadata: dict):
-    download_id = f"{metadata.get('artist')}_{metadata.get('title')}_{datetime.now().timestamp()}"
-    active_downloads[download_id] = {
-        "title": metadata.get("title"),
-        "artist": metadata.get("artist"),
-        "status": "downloading",
-        "progress": 0
-    }
-
-    try:
-        os.makedirs(OUTPUT_DIR, exist_ok=True)
-        temp = os.path.join(OUTPUT_DIR, "temp_download")
-
-        mp3 = download_audio(url, temp)
-        if not mp3:
-            active_downloads[download_id]["status"]="failed"
-            print(f"download failed for {metadata.get('title')}")
-            return
-        
-        active_downloads[download_id]["status"] = "tagging"
-        album_art = fetch_art(metadata.get("albumArtURL"))
-        tagging(mp3, metadata, album_art)
-
-        active_downloads[download_id]["status"] = "organzing"
-        path = organize(mp3, metadata)
-
-        active_downloads[download_id]["status"] = "completed"
-        print(f"downloaded to {path}")
-
-    except Exception as e:
-        active_downloads[download_id]["status"] = "error"
-        print(e)
-    finally:
-        asyncio.create_task(remove_download(download_id))
-
 
 @app.get("/downloads")
 def get_downloads():
