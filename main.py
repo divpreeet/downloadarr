@@ -194,38 +194,37 @@ def search_youtube(query):
         return []
 
 def download_audio(url, output_path):
-    print(f"[download_audio] Starting download from {url}")
-    print(f"[download_audio] Output path: {output_path}")
+    print("downloading...")
+
     try:
+        if os.path.exists(output_path):
+            os.remove(output_path)
+
+        if os.path.exists(output_path + ".mp3"):
+            os.remove(output_path + ".mp3")
+
         with yt_dlp.YoutubeDL({
-            "format": "bestaudio/best",
-            "postprocessors": [{"key": "FFmpegExtractAudio", "preferredcodec": "mp3", "preferredquality": 320}],
+            "format": "bestaudio[acodec!=none]/bestaudio/best",
+            "postprocessors": [{
+                "key": "FFmpegExtractAudio",
+                "preferredcodec": "mp3",
+                "preferredquality": "192",
+            }],
             "outtmpl": output_path,
-            "quiet": False,
-            "no_warnings": False,
-            "verbose": True,
+            "overwrites": True,
+            "quiet": True,
+            "no_warnings": True,
         }) as ydl:
-            print(f"[download_audio] Downloading...")
             ydl.download([url])
-        
+
         mp3 = output_path + ".mp3"
-        print(f"[download_audio] Looking for file: {mp3}")
-        
         if os.path.exists(mp3):
-            print(f"[download_audio] SUCCESS! File exists: {mp3}")
             return mp3
-        else:
-            print(f"[download_audio] FAILED! File not found: {mp3}")
-            temp_dir = os.path.dirname(output_path)
-            if os.path.exists(temp_dir):
-                files = os.listdir(temp_dir)
-                print(f"[download_audio] Files in {temp_dir}: {files}")
-            return None
-    except Exception as e:
-        print(f"[download_audio] EXCEPTION: {type(e).__name__}: {e}")
-        traceback.print_exc()
         return None
 
+    except Exception as e:
+        print(e)
+        return None
 
 def tagging(filepath, metadata, album_art):
     audio = MP3(filepath, ID3=ID3)

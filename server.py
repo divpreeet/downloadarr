@@ -62,6 +62,7 @@ def _download_task(url: str, metadata: dict):
     download_id = f"{metadata.get('artist')}_{metadata.get('title')}_{datetime.now().timestamp()}"
     
     active_downloads[download_id] = {
+        "id": download_id,
         "title": metadata.get("title"),
         "artist": metadata.get("artist"),
         "status": "downloading",
@@ -101,7 +102,7 @@ def _download_task(url: str, metadata: dict):
         traceback.print_exc()
     finally:
         def remove_later():
-            time.sleep(10)
+            time.sleep(300)
             active_downloads.pop(download_id, None)
         
         threading.Thread(target=remove_later, daemon=True).start()
