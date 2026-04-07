@@ -166,7 +166,7 @@ def _download_tast(url: str, metadata: dict):
         mp3 = download_audio(url, temp)
         if not mp3:
             active_downloads[download_id]["status"]="failed"
-            print(f"download failed for {metadata.get("title")}")
+            print(f"download failed for {metadata.get('title')}")
             return
         
         active_downloads[download_id]["status"] = "tagging"
