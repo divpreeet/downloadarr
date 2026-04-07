@@ -6,6 +6,7 @@ import yt_dlp
 import requests
 from mutagen.mp3 import MP3
 from mutagen.id3 import ID3, TIT2, TPE1, TALB, TDRC, TRCK, TCON, APIC
+import traceback
 
 OUTPUT_DIR = os.environ.get("MUSIC_DIR", "./music")
 SPOTIFY_CLIENT_ID = os.environ.get("SPOTIFY_CLIENT_ID", "")
@@ -193,25 +194,39 @@ def search_youtube(query):
         return []
 
 def download_audio(url, output_path):
-    print("downloading...")
+    print(f"[download_audio] Starting download from {url}")
+    print(f"[download_audio] Output path: {output_path}")
     try:
         with yt_dlp.YoutubeDL({
             "format": "bestaudio/best",
-            "postprocessors": [{"key": "FFmpegExtractAudio", "preferredcodec": "mp3", 'preferredquality':320}],
+            "postprocessors": [{"key": "FFmpegExtractAudio", "preferredcodec": "mp3", "preferredquality": 320}],
             "outtmpl": output_path,
-            "quiet": True,
-            "no_warnings": True,
+            "quiet": False,
+            "no_warnings": False,
+            "verbose": True,
         }) as ydl:
+            print(f"[download_audio] Downloading...")
             ydl.download([url])
+        
         mp3 = output_path + ".mp3"
+        print(f"[download_audio] Looking for file: {mp3}")
+        
         if os.path.exists(mp3):
+            print(f"[download_audio] SUCCESS! File exists: {mp3}")
             return mp3
         else:
+            print(f"[download_audio] FAILED! File not found: {mp3}")
+            temp_dir = os.path.dirname(output_path)
+            if os.path.exists(temp_dir):
+                files = os.listdir(temp_dir)
+                print(f"[download_audio] Files in {temp_dir}: {files}")
             return None
     except Exception as e:
-        print(e)
+        print(f"[download_audio] EXCEPTION: {type(e).__name__}: {e}")
+        traceback.print_exc()
         return None
-    
+
+
 def tagging(filepath, metadata, album_art):
     audio = MP3(filepath, ID3=ID3)
     try:
