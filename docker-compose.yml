@@ -5,7 +5,7 @@ services:
     build: .
     container_name: downloadarr
     ports:
-      -"8000:8000"
+      - "8000:8000"
     volumes:
       - ./music:/app/music
     environment:
@@ -14,7 +14,7 @@ services:
       - SPOTIFY_CLIENT_SECRET=${SPOTIFY_CLIENT_SECRET:-}
     restart: unless-stopped
     healthcheck:
-      test: ["CMD", "curl", "-f", "https://localhost:8000/"]
+      test: ["CMD", "curl", "-f", "http://localhost:8000/"]
       interval: 30s
       timeout: 10s
       retries: 3
