@@ -157,7 +157,7 @@ def metadata(query):
 def search_youtube(query):
     print(f"searching yt for {query}")
     opts = {
-        "quiet": True,
+        "quiet": False,
         "no_warnings": True,
         "extract_flat": False,
         "noplaylist": True,

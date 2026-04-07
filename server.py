@@ -73,7 +73,7 @@ def _download_task(url: str, metadata: dict):
     
     try:
         os.makedirs(OUTPUT_DIR, exist_ok=True)
-        temp = os.path.join(OUTPUT_DIR, "temp_download")
+        temp = os.path.join(OUTPUT_DIR, f"temp_download{download_id}")
 
         print(f"[download] Downloading audio from {url}")
         mp3 = download_audio(url, temp)
