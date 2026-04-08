@@ -194,14 +194,13 @@ def search_youtube(query):
         return []
 
 def download_audio(url, output_path):
-    print("downloading...")
-
+    print("downloading...", url)
     try:
         if os.path.exists(output_path):
             os.remove(output_path)
-
-        if os.path.exists(output_path + ".mp3"):
-            os.remove(output_path + ".mp3")
+        for f in os.listdir(os.path.dirname(output_path)):
+            if f.startswith(os.path.basename(output_path)):
+                os.remove(os.path.join(os.path.dirname(output_path), f))
 
         with yt_dlp.YoutubeDL({
             "format": "bestaudio[acodec!=none]/bestaudio/best",
@@ -210,16 +209,20 @@ def download_audio(url, output_path):
                 "preferredcodec": "mp3",
                 "preferredquality": "192",
             }],
-            "outtmpl": output_path,
+            "outtmpl": output_path + ".%(ext)s",
             "overwrites": True,
-            "quiet": True,
-            "no_warnings": True,
+            "quiet": False,
+            "no_warnings": False,
+            "noplaylist": True,
+            "extractor_args": {"youtube": {"player_client": ["android"]}},
         }) as ydl:
             ydl.download([url])
 
         mp3 = output_path + ".mp3"
         if os.path.exists(mp3):
             return mp3
+
+        print("mp3 not found, files availale: ", os.listdir(os.path.dirname(output_path)))
         return None
 
     except Exception as e:
