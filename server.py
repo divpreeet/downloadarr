@@ -100,12 +100,6 @@ def _download_task(url: str, metadata: dict):
         print(f"[download] Error: {e}")
         import traceback
         traceback.print_exc()
-    finally:
-        def remove_later():
-            time.sleep(300)
-            active_downloads.pop(download_id, None)
-        
-        threading.Thread(target=remove_later, daemon=True).start()
 
 @app.post("/download")
 def download(req: DownloadRequest, background_tasks: BackgroundTasks):
